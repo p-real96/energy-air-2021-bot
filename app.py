@@ -2,6 +2,11 @@ import requests
 import json
 import time
 import random
+import sys, getopt
+import logging
+import cloudscraper
+
+logging.basicConfig(format='%(asctime)s - %(process)d - %(levelname)s - %(message)s', level=logging.INFO)
 
 def get_answer(question):
     switcher = {
@@ -36,7 +41,7 @@ def get_answer(question):
         "WER WAR DER ALLERERSTE ACT IN DER GESCHICHTE DES ENERGY AIR?": "Bastian Baker",
         "WELCHES SCHWEIZER DJ-DUO SORGTE AM ENERGY AIR 2019 ZU BEGINN FÜR REICHLICH STIMMUNG?": "Averdeck",
         "WO KANNST DU, UNTER ANDEREM, ENERGY AIR TICKETS GEWINNEN?": "Am Sender bei Radio Energy",
-        "WELCHER ACT WAR NOCH NIE AN EINEM ENERGY AIR DABEI?": "Michael Patrick Kelly",
+        "WELCHER ACT WAR NOCH NIE AN EINEM ENERGY AIR DABEI?": "Cro",
         "WER WAR DER ÜBERRASCHUNGSACT AM ENERGY AIR 2018?": "Lo & Leduc",
         "IN WELCHER BELIEBTEN SERIE WAR TALLY WEIJL ZU SEHEN?": "Gossip Girl",
         "WIE HEISST DIE INITIATIVE FÜR MEHR RESPEKT IM INTERNET, WELCHE SWISSCOM MIT ENERGY LANCIERT HAT UND AM ENERGY AIR IHREN GROSSEN HÖHEPUNKT FEIERT?": "Mute the hate",
@@ -44,106 +49,146 @@ def get_answer(question):
     }
     return switcher.get(question.upper(), "Invalid question")
 
+def main(argv):
 
-while True:
+    xsrf_token = ''
+    energy_game_session = ''
+    access_token = ''
+    count = 1
 
-    url = "https://game.energy.ch/api/questions"
-    payload={}
-    headers = {
-    'Host': 'game.energy.ch',
-    'Connection': 'close',
-    'Accept': 'application/json, text/plain, */*',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36',
-    'X-Requested-With': 'XMLHttpRequest',
-    'Sec-Fetch-Site': 'same-origin',
-    'Sec-Fetch-Mode': 'cors',
-    'Sec-Fetch-Dest': 'empty',
-    'Referer': 'https://game.energy.ch/',
-    'Accept-Encoding': 'gzip, deflate',
-    'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
-    'Cookie': 'XSRF-TOKEN=OqoaJFBweWilnYdaAETDC0NOTUVeIZ8Pws4RadC8; energy_game_session=8IbZrPceEemKfCNJ1ZQGA81pZ0AYesd2VXtTanT1; _ga=GA1.2.990381397.1629101106; _gid=GA1.2.1552452295.1629101106; _gat=1; access_token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlM2UVRPR1h5RmYzWjV0RnlBQUdRbTdzZ1FDejlnMzl5Zm5OOXp4YlRkclEifQ.eyJqdGkiOiJCNndFN0xYWUs4QjhCTFlXQnp5MmsiLCJzdWIiOiJhdXRoMHxmNWE4MzE5Nzk5Y2E5Yjg4NGQ3Y2JjYjZiN2U3NDgyMTMxZWM1YjBhM2UwMDhmZjRmMTY2M2VhN2YxYWU5MWU5IiwiaWF0IjoxNjI5MTAxNDAzLCJleHAiOjE2MjkxODc4MDMsInNjb3BlIjoib3BlbmlkIGVtYWlsIiwiaXNzIjoiaHR0cHM6Ly9sb2dpbi5jb25uZWN0LnJpbmdpZXIuY2gvIiwiYXVkIjoiSldUOUdCak1jYUo3ZG44RkN6WjdTVkVTcGdZajk4bnEiLCJodHRwczovL2Nvbm5lY3QucmluZ2llci5jaC91cm46cmluZ2llcjpicmFuZC1uYW1lIjoiZW5lcmd5IiwidXJuOm9uZWxvZzpicmFuZC1uYW1lIjoiZW5lcmd5IiwiYXV0aF90aW1lIjoxNjI5MTAxNDAzfQ.QjsDwoRHLq2pGJ1ngmpkBAFn-gwH-6nCIqCAom-XXRRTlurlkYISqZDLknGpEoP1EJ3L42PHUhPjgRGfB-66hCB9tcbFrfx6d6Vr5uW378YeBHP-BC_6c3NjEspnaqomgCpM-WfLK6ETIEfr3S-MWbQ_g__YU8uXBAmOFHMC0bSgewgN0RTLvP53BAOLoLbsvv-kAAB2bGMGtXyXzvof-I-kiBPdtfOeO4bvXYY2kwJM6_pHDVvhpcP8Iq-CnwqYlwS29NezaqsABd4n7R8mH7vZT1IVc6H0gfRscVwpqXUnLyksdfMJkjaXM8anNu8Bfuvef2p10Xq4lLDDaXfEsQ; energy_game_session=8IbZrPceEemKfCNJ1ZQGA81pZ0AYesd2VXtTanT1'
-    }
-    response = requests.request("GET", url, headers=headers, data=payload)
-    response_json = json.loads(response.text)
+    try:
+        opts, args = getopt.getopt(argv,"hx:e:a:")
+    except getopt.GetoptError:
+        print('app.py -x <xsrf_token> -e <energy_game_session> -a <access_token>')
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print('app.py -x <xsrf_token> -e <energy_game_session> -a <access_token>')
+            sys.exit()
+        elif opt in ("-x"):
+            xsrf_token = arg
+        elif opt in ("-e"):
+            energy_game_session = arg
+        elif opt in ("-a"):
+            access_token = arg
+    
+    logging.info("XSRF token: {}".format(xsrf_token))
+    logging.info("Energy Game Session: {}".format(energy_game_session))
+    logging.info("Access token: {}".format(access_token))
 
-    print(response_json)
-    answer_ids = []
+    s = cloudscraper.create_scraper(interpreter='nodejs')
+    s.cookies.set('XSRF-TOKEN', xsrf_token, path='/', domain='game.energy.ch')
+    s.cookies.set('access_token', access_token, path='/', domain='game.energy.ch')
+    s.cookies.set('energy_game_session', energy_game_session, path='/', domain='game.energy.ch')
 
-    for question in response_json:
-        
-        print("question: {} | answer: {}".format(question['text'], get_answer(question['text'])))
+    while True:
 
-        answer_text = get_answer(question['text'])
-        index = 0
+        url = "https://game.energy.ch/api/questions"
+        payload={}
+        headers = {
+        'Host': 'game.energy.ch',
+        'Connection': 'close',
+        'Accept': 'application/json, text/plain, */*',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Dest': 'empty',
+        'Referer': 'https://game.energy.ch/',
+        'Accept-Encoding': 'gzip, deflate',
+        'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
+        #'Cookie': 'XSRF-TOKEN={}; energy_game_session={}; _ga=GA1.2.990381397.1629101106; _gid=GA1.2.1552452295.1629101106; _gat=1; access_token={}; energy_game_session={}'.format(xsrf_token, energy_game_session, access_token, energy_game_session)
+        }
+        response = s.get(url, headers=headers, data=payload)
+        response_json = json.loads(response.text)
 
-        for answer in question['answers']:
-            
-            if answer['text'] == answer_text:
-                #print("found id: {}".format(index))
-                answer_ids.append(index)
-            index += 1
+        if len(response_json) > 9:
 
-    data = {}
-    data['answers'] = answer_ids
-    json_data = json.dumps(data)
-    print(json_data)
+            answer_ids = []
 
-    time.sleep(random.randint(5, 10))
+            for question in response_json:
+                
+                #print("question: {} | answer: {}".format(question['text'], get_answer(question['text'])))
 
-    url = "https://game.energy.ch/api/questions/check"
+                answer_text = get_answer(question['text'])
+                index = 0
 
-    #payload="{\"answers\":[0,0,1,0,2,0,2,1,1,1]}"
-    payload = json_data
-    headers = {
-    'Host': 'game.energy.ch',
-    'Connection': 'close',
-    'Content-Length': '33',
-    'Accept': 'application/json, text/plain, */*',
-    'X-Requested-With': 'XMLHttpRequest',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36',
-    'Content-Type': 'application/json;charset=UTF-8',
-    'Origin': 'https://game.energy.ch',
-    'Sec-Fetch-Site': 'same-origin',
-    'Sec-Fetch-Mode': 'cors',
-    'Sec-Fetch-Dest': 'empty',
-    'Referer': 'https://game.energy.ch/',
-    'Accept-Encoding': 'gzip, deflate',
-    'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
-    'Cookie': 'XSRF-TOKEN=OqoaJFBweWilnYdaAETDC0NOTUVeIZ8Pws4RadC8; energy_game_session=8IbZrPceEemKfCNJ1ZQGA81pZ0AYesd2VXtTanT1; _ga=GA1.2.990381397.1629101106; _gid=GA1.2.1552452295.1629101106; access_token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlM2UVRPR1h5RmYzWjV0RnlBQUdRbTdzZ1FDejlnMzl5Zm5OOXp4YlRkclEifQ.eyJqdGkiOiJCNndFN0xYWUs4QjhCTFlXQnp5MmsiLCJzdWIiOiJhdXRoMHxmNWE4MzE5Nzk5Y2E5Yjg4NGQ3Y2JjYjZiN2U3NDgyMTMxZWM1YjBhM2UwMDhmZjRmMTY2M2VhN2YxYWU5MWU5IiwiaWF0IjoxNjI5MTAxNDAzLCJleHAiOjE2MjkxODc4MDMsInNjb3BlIjoib3BlbmlkIGVtYWlsIiwiaXNzIjoiaHR0cHM6Ly9sb2dpbi5jb25uZWN0LnJpbmdpZXIuY2gvIiwiYXVkIjoiSldUOUdCak1jYUo3ZG44RkN6WjdTVkVTcGdZajk4bnEiLCJodHRwczovL2Nvbm5lY3QucmluZ2llci5jaC91cm46cmluZ2llcjpicmFuZC1uYW1lIjoiZW5lcmd5IiwidXJuOm9uZWxvZzpicmFuZC1uYW1lIjoiZW5lcmd5IiwiYXV0aF90aW1lIjoxNjI5MTAxNDAzfQ.QjsDwoRHLq2pGJ1ngmpkBAFn-gwH-6nCIqCAom-XXRRTlurlkYISqZDLknGpEoP1EJ3L42PHUhPjgRGfB-66hCB9tcbFrfx6d6Vr5uW378YeBHP-BC_6c3NjEspnaqomgCpM-WfLK6ETIEfr3S-MWbQ_g__YU8uXBAmOFHMC0bSgewgN0RTLvP53BAOLoLbsvv-kAAB2bGMGtXyXzvof-I-kiBPdtfOeO4bvXYY2kwJM6_pHDVvhpcP8Iq-CnwqYlwS29NezaqsABd4n7R8mH7vZT1IVc6H0gfRscVwpqXUnLyksdfMJkjaXM8anNu8Bfuvef2p10Xq4lLDDaXfEsQ; _gat=1; energy_game_session=8IbZrPceEemKfCNJ1ZQGA81pZ0AYesd2VXtTanT1'
-    }
+                for answer in question['answers']:
+                    
+                    if answer['text'] == answer_text:
+                        #print("found id: {}".format(index))
+                        answer_ids.append(index)
+                    index += 1
 
-    response = requests.request("POST", url, headers=headers, data=payload)
+            data = {}
+            data['answers'] = answer_ids
+            json_data = json.dumps(data, separators=(',', ':'))
+            logging.info(json_data)
 
-    print(response.text)
+            time.sleep(random.randint(3, 5))
 
-    time.sleep(random.randint(3, 6))
+            url = "https://game.energy.ch/api/questions/check"
 
-    url = "https://game.energy.ch/api/win"
+            #payload="{\"answers\":[0,0,1,0,2,0,2,1,1,1]}"
+            payload = json_data
+            headers = {
+            'Host': 'game.energy.ch',
+            'Connection': 'close',
+            'Content-Length': '33',
+            'Accept': 'application/json, text/plain, */*',
+            'X-Requested-With': 'XMLHttpRequest',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36',
+            'Content-Type': 'application/json;charset=UTF-8',
+            'Origin': 'https://game.energy.ch',
+            'Sec-Fetch-Site': 'same-origin',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Dest': 'empty',
+            'Referer': 'https://game.energy.ch/',
+            'Accept-Encoding': 'gzip, deflate',
+            'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
+            #'Cookie': 'XSRF-TOKEN={}; energy_game_session={}; _ga=GA1.2.990381397.1629101106; _gid=GA1.2.1552452295.1629101106; _gat=1; access_token={}; energy_game_session={}'.format(xsrf_token, energy_game_session, access_token, energy_game_session)
+            }
 
-    payload="{\"name\":\"eair\",\"isTicketGame\":true}"
-    headers = {
-    'Host': 'game.energy.ch',
-    'Connection': 'close',
-    'Content-Length': '35',
-    'Accept': 'application/json, text/plain, */*',
-    'X-Requested-With': 'XMLHttpRequest',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36',
-    'Content-Type': 'application/json;charset=UTF-8',
-    'Origin': 'https://game.energy.ch',
-    'Sec-Fetch-Site': 'same-origin',
-    'Sec-Fetch-Mode': 'cors',
-    'Sec-Fetch-Dest': 'empty',
-    'Referer': 'https://game.energy.ch/',
-    'Accept-Encoding': 'gzip, deflate',
-    'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
-    'Cookie': 'XSRF-TOKEN=OqoaJFBweWilnYdaAETDC0NOTUVeIZ8Pws4RadC8; energy_game_session=8IbZrPceEemKfCNJ1ZQGA81pZ0AYesd2VXtTanT1; _ga=GA1.2.990381397.1629101106; _gid=GA1.2.1552452295.1629101106; access_token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlM2UVRPR1h5RmYzWjV0RnlBQUdRbTdzZ1FDejlnMzl5Zm5OOXp4YlRkclEifQ.eyJqdGkiOiJCNndFN0xYWUs4QjhCTFlXQnp5MmsiLCJzdWIiOiJhdXRoMHxmNWE4MzE5Nzk5Y2E5Yjg4NGQ3Y2JjYjZiN2U3NDgyMTMxZWM1YjBhM2UwMDhmZjRmMTY2M2VhN2YxYWU5MWU5IiwiaWF0IjoxNjI5MTAxNDAzLCJleHAiOjE2MjkxODc4MDMsInNjb3BlIjoib3BlbmlkIGVtYWlsIiwiaXNzIjoiaHR0cHM6Ly9sb2dpbi5jb25uZWN0LnJpbmdpZXIuY2gvIiwiYXVkIjoiSldUOUdCak1jYUo3ZG44RkN6WjdTVkVTcGdZajk4bnEiLCJodHRwczovL2Nvbm5lY3QucmluZ2llci5jaC91cm46cmluZ2llcjpicmFuZC1uYW1lIjoiZW5lcmd5IiwidXJuOm9uZWxvZzpicmFuZC1uYW1lIjoiZW5lcmd5IiwiYXV0aF90aW1lIjoxNjI5MTAxNDAzfQ.QjsDwoRHLq2pGJ1ngmpkBAFn-gwH-6nCIqCAom-XXRRTlurlkYISqZDLknGpEoP1EJ3L42PHUhPjgRGfB-66hCB9tcbFrfx6d6Vr5uW378YeBHP-BC_6c3NjEspnaqomgCpM-WfLK6ETIEfr3S-MWbQ_g__YU8uXBAmOFHMC0bSgewgN0RTLvP53BAOLoLbsvv-kAAB2bGMGtXyXzvof-I-kiBPdtfOeO4bvXYY2kwJM6_pHDVvhpcP8Iq-CnwqYlwS29NezaqsABd4n7R8mH7vZT1IVc6H0gfRscVwpqXUnLyksdfMJkjaXM8anNu8Bfuvef2p10Xq4lLDDaXfEsQ; _gat=1; energy_game_session=8IbZrPceEemKfCNJ1ZQGA81pZ0AYesd2VXtTanT1'
-    }
+            response = s.post(url, headers=headers, data=payload)
 
-    response = requests.request("POST", url, headers=headers, data=payload)
+            logging.info(response.text)
+            if 'correct' in response.text:
+                iscorrect = json.loads(response.text)
+                if iscorrect['correct'] == True:
 
-    print(response.text)
-    response = json.loads(response.text)
-    if response['win'] == "true":
-        break;
+                    time.sleep(random.randint(1, 3))
 
-    time.sleep(random.randint(3, 5))
+                    url = "https://game.energy.ch/api/win"
+
+                    payload="{\"name\":\"eair\",\"isTicketGame\":true}"
+                    headers = {
+                    'Host': 'game.energy.ch',
+                    'Connection': 'close',
+                    'Content-Length': '35',
+                    'Accept': 'application/json, text/plain, */*',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36',
+                    'Content-Type': 'application/json;charset=UTF-8',
+                    'Origin': 'https://game.energy.ch',
+                    'Sec-Fetch-Site': 'same-origin',
+                    'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Dest': 'empty',
+                    'Referer': 'https://game.energy.ch/',
+                    'Accept-Encoding': 'gzip, deflate',
+                    'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
+                    #'Cookie': 'XSRF-TOKEN={}; energy_game_session={}; _ga=GA1.2.990381397.1629101106; _gid=GA1.2.1552452295.1629101106; _gat=1; access_token={}; energy_game_session={}'.format(xsrf_token, energy_game_session, access_token, energy_game_session)
+                    }
+
+                    response = s.post(url, headers=headers, data=payload)
+                    logging.info(response.text)
+                    if 'win' in response.text:
+                        response = json.loads(response.text)
+                        if response['win'] == True:
+                            sys.exit("Tickets won!!!")
+
+        count += 1
+        logging.info("Number of runs: {}".format(count))
+        #time.sleep(random.randint(, 5))
+
+if __name__ == "__main__":
+   main(sys.argv[1:])
