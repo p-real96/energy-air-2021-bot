@@ -8,6 +8,9 @@ import cloudscraper
 
 logging.basicConfig(format='%(asctime)s - %(process)d - %(levelname)s - %(message)s', level=logging.INFO)
 
+global s 
+s = cloudscraper.create_scraper(interpreter='nodejs')#, debug=logging.INFO)
+
 def get_answer(question):
     switcher = {
         "WIE HEISST DER OFFIZIELLE INSTAGRAM-ACCOUNT DES ENERGY AIR?": "@energyair_official",
@@ -49,6 +52,112 @@ def get_answer(question):
     }
     return switcher.get(question.upper(), "Invalid question")
 
+
+def get_questions():
+    url = "https://game.energy.ch/api/questions"
+    payload={}
+    headers = {
+    'Host': 'game.energy.ch',
+    #'Connection': 'close',
+    'Accept': 'application/json, text/plain, */*',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36',
+    'X-Requested-With': 'XMLHttpRequest',
+    'Sec-Fetch-Site': 'same-origin',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Dest': 'empty',
+    'Referer': 'https://game.energy.ch/',
+    'Accept-Encoding': 'gzip, deflate',
+    'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
+    }
+    response = s.get(url, headers=headers, data=payload)
+    response_json = json.loads(response.text)
+    return response_json
+
+def get_answers(questions):
+    answer_ids = []
+    for question in questions:
+        
+        #print("question: {} | answer: {}".format(question['text'], get_answer(question['text'])))
+
+        answer_text = get_answer(question['text'])
+        index = 0
+
+        for answer in question['answers']:
+            
+            if answer['text'] == answer_text:
+                #print("found id: {}".format(index))
+                answer_ids.append(index)
+            index += 1
+
+    data = {}
+    data['answers'] = answer_ids
+    json_data = json.dumps(data, separators=(',', ':'))
+    return json_data
+
+def retrieve_solutions():
+    questions = get_questions()
+
+    if len(questions) > 9:
+        answers = get_answers(questions)
+        return answers
+
+    else:
+        retrieve_solutions()
+
+def send_solutions(solutions):
+    url = "https://game.energy.ch/api/questions/check"
+    payload = solutions
+    headers = {
+    'Host': 'game.energy.ch',
+    #'Connection': 'close',
+    'Content-Length': '33',
+    'Accept': 'application/json, text/plain, */*',
+    'X-Requested-With': 'XMLHttpRequest',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36',
+    'Content-Type': 'application/json;charset=UTF-8',
+    'Origin': 'https://game.energy.ch',
+    'Sec-Fetch-Site': 'same-origin',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Dest': 'empty',
+    'Referer': 'https://game.energy.ch/',
+    'Accept-Encoding': 'gzip, deflate',
+    'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
+    }
+
+    response = s.post(url, headers=headers, data=payload)
+    response_json = json.loads(response.text)
+    #if 'message' in response_json:
+        #send_solutions(solutions)
+    return response_json
+
+
+def win():
+    url = "https://game.energy.ch/api/win"
+    payload="{\"name\":\"eair\",\"isTicketGame\":true}"
+    headers = {
+    'Host': 'game.energy.ch',
+    #'Connection': 'close',
+    'Content-Length': '35',
+    'Accept': 'application/json, text/plain, */*',
+    'X-Requested-With': 'XMLHttpRequest',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36',
+    'Content-Type': 'application/json;charset=UTF-8',
+    'Origin': 'https://game.energy.ch',
+    'Sec-Fetch-Site': 'same-origin',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Dest': 'empty',
+    'Referer': 'https://game.energy.ch/',
+    'Accept-Encoding': 'gzip, deflate',
+    'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
+    }
+
+    response = s.post(url, headers=headers, data=payload)
+    response_json = json.loads(response.text)
+    if 'message' in response_json:
+        win()
+    return response_json
+
+
 def main(argv):
 
     xsrf_token = ''
@@ -76,119 +185,30 @@ def main(argv):
     logging.info("Energy Game Session: {}".format(energy_game_session))
     logging.info("Access token: {}".format(access_token))
 
-    s = cloudscraper.create_scraper(interpreter='nodejs')
     s.cookies.set('XSRF-TOKEN', xsrf_token, path='/', domain='game.energy.ch')
     s.cookies.set('access_token', access_token, path='/', domain='game.energy.ch')
     s.cookies.set('energy_game_session', energy_game_session, path='/', domain='game.energy.ch')
 
     while True:
+        solutions = retrieve_solutions()
+        logging.info(solutions)
+        time.sleep(random.randint(1, 2))
+        solution_result = send_solutions(solutions)
+        logging.info(solution_result)
 
-        url = "https://game.energy.ch/api/questions"
-        payload={}
-        headers = {
-        'Host': 'game.energy.ch',
-        'Connection': 'close',
-        'Accept': 'application/json, text/plain, */*',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Sec-Fetch-Site': 'same-origin',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Dest': 'empty',
-        'Referer': 'https://game.energy.ch/',
-        'Accept-Encoding': 'gzip, deflate',
-        'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
-        #'Cookie': 'XSRF-TOKEN={}; energy_game_session={}; _ga=GA1.2.990381397.1629101106; _gid=GA1.2.1552452295.1629101106; _gat=1; access_token={}; energy_game_session={}'.format(xsrf_token, energy_game_session, access_token, energy_game_session)
-        }
-        response = s.get(url, headers=headers, data=payload)
-        response_json = json.loads(response.text)
-
-        if len(response_json) > 9:
-
-            answer_ids = []
-
-            for question in response_json:
-                
-                #print("question: {} | answer: {}".format(question['text'], get_answer(question['text'])))
-
-                answer_text = get_answer(question['text'])
-                index = 0
-
-                for answer in question['answers']:
-                    
-                    if answer['text'] == answer_text:
-                        #print("found id: {}".format(index))
-                        answer_ids.append(index)
-                    index += 1
-
-            data = {}
-            data['answers'] = answer_ids
-            json_data = json.dumps(data, separators=(',', ':'))
-            logging.info(json_data)
-
-            time.sleep(random.randint(3, 5))
-
-            url = "https://game.energy.ch/api/questions/check"
-
-            #payload="{\"answers\":[0,0,1,0,2,0,2,1,1,1]}"
-            payload = json_data
-            headers = {
-            'Host': 'game.energy.ch',
-            'Connection': 'close',
-            'Content-Length': '33',
-            'Accept': 'application/json, text/plain, */*',
-            'X-Requested-With': 'XMLHttpRequest',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36',
-            'Content-Type': 'application/json;charset=UTF-8',
-            'Origin': 'https://game.energy.ch',
-            'Sec-Fetch-Site': 'same-origin',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Dest': 'empty',
-            'Referer': 'https://game.energy.ch/',
-            'Accept-Encoding': 'gzip, deflate',
-            'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
-            #'Cookie': 'XSRF-TOKEN={}; energy_game_session={}; _ga=GA1.2.990381397.1629101106; _gid=GA1.2.1552452295.1629101106; _gat=1; access_token={}; energy_game_session={}'.format(xsrf_token, energy_game_session, access_token, energy_game_session)
-            }
-
-            response = s.post(url, headers=headers, data=payload)
-
-            logging.info(response.text)
-            if 'correct' in response.text:
-                iscorrect = json.loads(response.text)
-                if iscorrect['correct'] == True:
-
-                    time.sleep(random.randint(1, 3))
-
-                    url = "https://game.energy.ch/api/win"
-
-                    payload="{\"name\":\"eair\",\"isTicketGame\":true}"
-                    headers = {
-                    'Host': 'game.energy.ch',
-                    'Connection': 'close',
-                    'Content-Length': '35',
-                    'Accept': 'application/json, text/plain, */*',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36',
-                    'Content-Type': 'application/json;charset=UTF-8',
-                    'Origin': 'https://game.energy.ch',
-                    'Sec-Fetch-Site': 'same-origin',
-                    'Sec-Fetch-Mode': 'cors',
-                    'Sec-Fetch-Dest': 'empty',
-                    'Referer': 'https://game.energy.ch/',
-                    'Accept-Encoding': 'gzip, deflate',
-                    'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7',
-                    #'Cookie': 'XSRF-TOKEN={}; energy_game_session={}; _ga=GA1.2.990381397.1629101106; _gid=GA1.2.1552452295.1629101106; _gat=1; access_token={}; energy_game_session={}'.format(xsrf_token, energy_game_session, access_token, energy_game_session)
-                    }
-
-                    response = s.post(url, headers=headers, data=payload)
-                    logging.info(response.text)
-                    if 'win' in response.text:
-                        response = json.loads(response.text)
-                        if response['win'] == True:
+        if 'correct' in solution_result:
+                if solution_result['correct'] == True:
+                    time.sleep(random.randint(1, 2))
+                    win_result = win()
+                    logging.info(win_result)
+                    if 'win' in win_result:
+                        if win_result['win'] == True:
                             sys.exit("Tickets won!!!")
+
 
         count += 1
         logging.info("Number of runs: {}".format(count))
-        #time.sleep(random.randint(, 5))
+        time.sleep(random.randint(1, 2))
 
 if __name__ == "__main__":
    main(sys.argv[1:])
