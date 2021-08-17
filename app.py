@@ -4,12 +4,18 @@ import time
 import random
 import sys, getopt
 import logging
-import cloudscraper
+import argparse
 
 logging.basicConfig(format='%(asctime)s - %(process)d - %(levelname)s - %(message)s', level=logging.INFO)
 
+# Edit max delay between requests here
+maxDelay = 2
+
 global s 
-s = cloudscraper.create_scraper(interpreter='nodejs')#, debug=logging.INFO)
+s = requests.Session()
+
+def delay_request():
+    time.sleep(random.randint(1, maxDelay))
 
 def get_answer(question):
     switcher = {
@@ -76,19 +82,12 @@ def get_questions():
 def get_answers(questions):
     answer_ids = []
     for question in questions:
-        
-        #print("question: {} | answer: {}".format(question['text'], get_answer(question['text'])))
-
         answer_text = get_answer(question['text'])
         index = 0
-
         for answer in question['answers']:
-            
             if answer['text'] == answer_text:
-                #print("found id: {}".format(index))
                 answer_ids.append(index)
             index += 1
-
     data = {}
     data['answers'] = answer_ids
     json_data = json.dumps(data, separators=(',', ':'))
@@ -96,13 +95,11 @@ def get_answers(questions):
 
 def retrieve_solutions():
     questions = get_questions()
-
     if len(questions) > 9:
         answers = get_answers(questions)
         return answers
-
     else:
-        retrieve_solutions()
+        return questions
 
 def send_solutions(solutions):
     url = "https://game.energy.ch/api/questions/check"
@@ -126,8 +123,6 @@ def send_solutions(solutions):
 
     response = s.post(url, headers=headers, data=payload)
     response_json = json.loads(response.text)
-    #if 'message' in response_json:
-        #send_solutions(solutions)
     return response_json
 
 
@@ -159,28 +154,18 @@ def win():
 
 
 def main(argv):
-
-    xsrf_token = ''
-    energy_game_session = ''
-    access_token = ''
     count = 1
+    parser = argparse.ArgumentParser()
+    parser.add_argument("x", help="XSRF-TOKEN retrieved from game.energy.ch cookie")
+    parser.add_argument("e", help="energy_game_session retrieved from game.energy.ch cookie")
+    parser.add_argument("a", help="access_token retrieved from game.energy.ch cookie")
+    args, unknown = parser.parse_known_args()
 
-    try:
-        opts, args = getopt.getopt(argv,"hx:e:a:")
-    except getopt.GetoptError:
-        print('app.py -x <xsrf_token> -e <energy_game_session> -a <access_token>')
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt == '-h':
-            print('app.py -x <xsrf_token> -e <energy_game_session> -a <access_token>')
-            sys.exit()
-        elif opt in ("-x"):
-            xsrf_token = arg
-        elif opt in ("-e"):
-            energy_game_session = arg
-        elif opt in ("-a"):
-            access_token = arg
-    
+    xsrf_token = args.x
+    energy_game_session = args.e
+    access_token = args.a
+
+    logging.info("Script started with the following variables")
     logging.info("XSRF token: {}".format(xsrf_token))
     logging.info("Energy Game Session: {}".format(energy_game_session))
     logging.info("Access token: {}".format(access_token))
@@ -192,23 +177,23 @@ def main(argv):
     while True:
         solutions = retrieve_solutions()
         logging.info(solutions)
-        time.sleep(random.randint(1, 2))
+        if 'errorName' in solutions:
+            sys.exit("Unauthorized - Please check the provided script parameter")
+        delay_request()
         solution_result = send_solutions(solutions)
         logging.info(solution_result)
 
         if 'correct' in solution_result:
                 if solution_result['correct'] == True:
-                    time.sleep(random.randint(1, 2))
+                    delay_request()
                     win_result = win()
                     logging.info(win_result)
                     if 'win' in win_result:
                         if win_result['win'] == True:
                             sys.exit("Tickets won!!!")
-
-
         count += 1
         logging.info("Number of runs: {}".format(count))
-        time.sleep(random.randint(1, 2))
+        delay_request()
 
 if __name__ == "__main__":
    main(sys.argv[1:])
