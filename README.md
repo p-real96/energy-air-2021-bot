@@ -4,7 +4,7 @@ Das Script ist in Python geschrieben und wird via Kommando-Zeile gestartet.
 
 ## Usage
 Um das Script starten zu können, müssen drei Parameter übergeben werden.
-Die Parameter dienen zur eindeutigen Idenfizierung des Benutzers um am Gewinnspiel teilnehmen zu können.
+Diese Parameter dienen zur eindeutigen Idenfizierung des Benutzers um am Gewinnspiel teilnehmen zu können.
 
 Als erstes sollte das Chrome-Addon "EditThisCookie" heruntergerladen und im Chrome Browser installiert werden:
 https://chrome.google.com/webstore/detail/editthiscookie/fngmhnnpilhplaeedifhccceomclgfbg/related?hl=de
@@ -19,7 +19,7 @@ Hier werden die folgenden Cookies benötigt:
 * energy_game_session
 * access_token
 
-Anschliessned wird das Script via Kommando-Zeile gestartet und die Cookies mit den Parameter übergeben
+Danach wird das Script via Kommando-Zeile gestartet und die Cookies mit den Parameter übergeben
 
 ```bash
 python3 app.py -x "<XSRF-TOKEN>" -e "<energy_game_session>" -a "<access_token>"
@@ -33,3 +33,4 @@ Wenn dir der Bot gefällt, würde ich mich über einen Kaffee freuen!
 * Untersuchen, in welchem Fall ein "Server Error" zurückgegeben wird
 * Validierung Fragen/Antworten
 * Script / Funktionen aufräumen
+* Script-Output formatieren
