@@ -25,7 +25,7 @@ Anschliessned wird das Script via Kommando-Zeile gestartet und die Cookies mit d
 python3 app.py -x "<XSRF-TOKEN>" -e "<energy_game_session>" -a "<access_token>"
 ```
 ## Buy Me a Coffee
-#####Wenn dir der Bot gefällt, würde ich mich über einen Kaffee freuen!
+Wenn dir der Bot gefällt, würde ich mich über einen Kaffee freuen!
 
 <a href="https://www.buymeacoffee.com/preal96" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
 
