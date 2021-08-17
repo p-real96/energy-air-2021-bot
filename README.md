@@ -12,6 +12,7 @@ https://chrome.google.com/webstore/detail/editthiscookie/fngmhnnpilhplaeedifhccc
 Anschliessend meldet man sich im Browser auf der Energy-Air Website an und navigiert auf das Gewinnspiel.
 Auf dieser Seite können die benötigten Cookies ausgelesen werden.
 
+![Alt text](./cookies.png?raw=true "Title")
 
 Hier werden die folgenden Cookies benötigt:
 * XSRF-TOKEN
